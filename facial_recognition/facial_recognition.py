@@ -2,6 +2,7 @@ import os
 import cv2
 import time
 import pickle # Used for saving and loading trained face encodings
+
 import numpy as np
 import face_recognition
 from imutils import paths
@@ -190,3 +191,4 @@ def recognize_faces():
 if __name__ == "__main__":
     train_faces()
     recognize_faces()
+
