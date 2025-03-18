@@ -4,14 +4,14 @@ import RPi.GPIO as GPIO
 
 class Fan:
     def __init__(self, state = "off"):
-        FAN_PIN = 5 # pin that fan is connected to
+        self.FAN_PIN = 5 # pin that fan is connected to
         GPIO.setmode(GPIO.BCM)  # set board pin reading to be the GPIO # ex. GPIO5 would be 5
-        GPIO.setup(FAN_PIN, GPIO.OUT) # set GPIO5 to be an output
+        GPIO.setup(self.FAN_PIN, GPIO.OUT) # set GPIO5 to be an output
         self.state = state
 
     def turn_fan_on(self):
         # turn fan on
-        GPIO.output(FAN_PIN, GPIO.HIGH)
+        GPIO.output(self.FAN_PIN, GPIO.LOW)
         time.sleep(1.25)
 
         # update state
@@ -20,7 +20,7 @@ class Fan:
 
     def turn_fan_off(self):
         #turn fan off
-        GPIO.output(FAN_PIN, GPIO.LOW)
+        GPIO.output(self.FAN_PIN, GPIO.HIGH)
         time.sleep(1.25)
     
         # update state

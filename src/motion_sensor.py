@@ -2,7 +2,7 @@ import RPi.GPIO as GPIO
 from gpiozero import MotionSensor, LED
 
 class Motion_Sensor:
-    def __init__(self, motion_detected = False):
+    def __init__(self, enable, motion_detected = False):
         LED_PIN = 17 # pin that led is connected to
         MOTION_PIN = 4 # pin that motion sensor is connected to
         GPIO.setmode(GPIO.BCM) # set board pin reading to be the GPIO # ex. GPIO5 would be 5
@@ -12,6 +12,7 @@ class Motion_Sensor:
         led = LED(LED_PIN)
         pir = MotionSensor(MOTION_PIN)
         self.motion = motion_detected
+        self.active = enable
 
     def check_motion(self):
         pir.wait_for_motion(timeout = 1)

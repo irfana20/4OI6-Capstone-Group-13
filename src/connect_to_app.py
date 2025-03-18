@@ -5,6 +5,7 @@ from light_bulb import LightBulb
 import time
 import RPi.GPIO as GPIO
 import multiprocessing
+from datetime import datetime
 
 class ConnectToApp:
 
@@ -43,10 +44,10 @@ class ConnectToApp:
             if fan_status is not None:
                 if fan_status:  # If fan is ON
                     print("Fan on")
-                    self.fan1.turn_fan_on  # Turn the fan on (active-low condition)
+                    self.fan1.turn_fan_on()  # Turn the fan on (active-low condition)
                 else:  # If fan is OFF
                     print("Fan off")
-                    self.fan1.turn_fan_off  # Turn the fan off (active-low condition)
+                    self.fan1.turn_fan_off()  # Turn the fan off (active-low condition)
 
     # Listener for Light changes
     def light_listener(self, doc_snapshot, changes, read_time):
@@ -56,10 +57,10 @@ class ConnectToApp:
             if light_status is not None:
                 if light_status:  # If light is ON
                     print("Light on")
-                    self.light1.turn_light_on  # Turn the light on (active-low condition)
+                    self.light1.turn_light_on()  # Turn the light on (active-low condition)
                 else:  # If light is OFF
                     print("Light off")
-                    self.light1.turn_light_off  # Turn the light off (active-low condition)
+                    self.light1.turn_light_off()  # Turn the light off (active-low condition)
 
     def connect_listeners(self):
         # Attach listeners to Firestore documents
@@ -75,11 +76,30 @@ class ConnectToApp:
         except KeyboardInterrupt:
             print("Exiting program now...")
 
-            self.fan1.turn_fan_off
+            self.fan1.turn_fan_off()
             print("turned off fan")
 
-            self.light1.turn_light_off
+            self.light1.turn_light_off()
             print("turned off light")
+
+    def send_alert(self, message, doc_name=None):
+        # if no document name is given
+        if doc_name is None:
+            # Use a timestamp-based document name
+            doc_name = f"alert_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        alert_data = {
+            "message": message,
+            "notification": {
+                "title": "Motion Detected",
+                "body": "Known vs unknown!"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # save the alert to firestore database under the alerts collection
+        self.db.collection("alerts").document(doc_name).set(alert_data)
+        print(f"Alert sent successfully with document name: {doc_name}")
 
     def is_connected(self):
         return self.connected

@@ -14,11 +14,11 @@ def main():
     # initialize firebase
     connection.initialize_firebase()
 
-    # check if connected to mobile app
+    # check if connected to database
     if (connection.is_connected()):
-        print("Connected to mobile app")
+        print("Connected to database")
     else:
-        ("Could not connect to mobile app")
+        ("Could not connect to database")
 
     # listen for changes in status for fan and light bulb
     connection.connect_listeners()
