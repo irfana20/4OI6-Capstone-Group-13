@@ -27,10 +27,10 @@ def recognize_faces():
     # Initialize the camera module
     print("[INFO] Initializing camera...")
     picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (1920, 1080)}))
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (1024, 768)}))
     picam2.start()
 
-    cv_scaler = 4  # Scale factor for faster processing
+    cv_scaler = 10  # Scale factor for faster processing
     face_locations = []  # Stores detected face positions
     face_encodings = []  # Stores numerical face data
     face_names = []  # Stores names of detected faces
