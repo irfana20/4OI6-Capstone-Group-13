@@ -85,7 +85,7 @@ def recognize_faces():
                 print(f"[INFO] Recognized a resident, opening door...")
                 motor.open_door()
                 last_open_time = current_time # Saving the current time so we know when the door was last opened
-                door_is_open = True
+                is_door_open = True
                 
         # Close the door after 10 seconds
         if is_door_open and (current_time - last_open_time > open_time):
