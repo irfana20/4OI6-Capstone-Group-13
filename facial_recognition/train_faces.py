@@ -68,3 +68,4 @@ def train_faces(new_photo_paths, resident_name):
 
 if __name__ == "__main__":
     train_faces()
+
