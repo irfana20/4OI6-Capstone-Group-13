@@ -88,7 +88,7 @@ def recognize_faces():
                 door_is_open = True
                 
         # Close the door after 10 seconds
-        if is_door_open and (current_time - last_open_time > door_open_duration):
+        if is_door_open and (current_time - last_open_time > open_time):
             print(f"[INFO] Closing door...")
             motor.close_door()
             is_door_open = False
