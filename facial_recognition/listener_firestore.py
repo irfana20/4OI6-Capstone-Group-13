@@ -84,23 +84,26 @@ def on_snapshot(col_snapshot, changes, read_time):
             for photo_url in photo_paths:
                 if photo_url not in processed_photos:
                     try:
-                        # Download the image (this already saves the file locally)
+                        # Download the image
                         download_and_save_image(resident_name, photo_url)
-                        
-                        # Mark it as processed
+
+                        # Mark as processed
                         processed_photos.add(photo_url)
                         save_processed_photo(photo_url)
-                        
-                        # Append the local file path (not the URL)
+
+                        # Get the local path of the saved image
                         image_name = os.path.basename(photo_url.split('?')[0])
-                        local_file_path = os.path.join(os.getcwd(), 'dataset', resident_name,  image_name)                              
-                        new_photos.append(photo_url)
-                    
+                        local_file_path = os.path.join(os.getcwd(), 'dataset', resident_name, image_name)
+
+                        # Append local file path to new_photos (not URL)
+                        new_photos.append(local_file_path)
+
                     except Exception as e:
                         print(f"[ERROR] Failed to download {photo_url}: {e}")
 
+            # Retrain if there are new photos
             if new_photos:
-                print(f"[INFO] New photos detected. Retraining model...")
+                print(f"[INFO] New photos detected for {resident_name}. Retraining model...")
                 train_faces(new_photos, resident_name)
             else:
                 print(f"[INFO] No new photos to process for {resident_name}.")
