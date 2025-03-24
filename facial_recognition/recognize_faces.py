@@ -27,10 +27,10 @@ def recognize_faces():
     # Initialize the camera module
     print("[INFO] Initializing camera...")
     picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (1024, 768)}))
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
     picam2.start()
 
-    cv_scaler = 10  # Scale factor for faster processing
+    cv_scaler = 5  # Scale factor for faster processing
     face_locations = []  # Stores detected face positions
     face_encodings = []  # Stores numerical face data
     face_names = []  # Stores names of detected faces
@@ -52,7 +52,7 @@ def recognize_faces():
         # Loop through all detected face encodings
         face_names = []
         for face_encoding in face_encodings:
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance = 0.5)
             name = "Unknown"
 
             # Compute the distance between the detected face and all known faces
@@ -106,6 +106,7 @@ def recognize_faces():
     while True:
         # Capture a frame from the camera
         frame = picam2.capture_array()
+#         time.sleep(5)
         # Process the frame 
         processed_frame = process_frame(frame)
         # Draw bounding boxes and labels around detected faces
@@ -129,3 +130,4 @@ def recognize_faces():
 
 if __name__ == "__main__":
     recognize_faces()
+
