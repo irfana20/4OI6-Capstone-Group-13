@@ -17,18 +17,24 @@ class Fan:
         
     def change_fan_speed(self, speed_mode):
         # Ensure the speed mode value is within the valid range (0-5)
-        speed_mode = max(0, min(3, speed_mode))
+        speed_mode = max(0, min(5, speed_mode))
 
         if speed_mode == 0:
             speed_percent = 0
 
         elif speed_mode == 1:
-            speed_percent = 32
+            speed_percent = 25
 
         elif speed_mode == 2:
-            speed_percent = 67
+            speed_percent = 40
 
         elif speed_mode == 3:
+            speed_percent = 60
+
+        elif speed_mode == 4:
+            speed_percent = 80
+
+        elif speed_mode == 5:
             speed_percent = 100
         
         # Invert the percentage (100% becomes 0%, 0% becomes 100%)
@@ -54,3 +60,40 @@ class Fan:
         self.pwm.stop()
         GPIO.cleanup()
         print("Cleaned up resources")
+
+# Test the fan
+try:
+    print("Starting fan test with inverted PWM...")
+    fan = Fan(pin=5)  # Use GPIO 5
+    
+    print("Testing fan speeds...")
+    fan.change_fan_speed(0)  # Off
+    time.sleep(2)
+    
+    fan.change_fan_speed(1)  # 25% speed
+    time.sleep(2)
+
+    fan.turn_fan_on()
+    time.sleep(5)
+    
+    fan.change_fan_speed(2)  # 50% speed
+    time.sleep(5)
+
+    fan.change_fan_speed(3)  # 100% speed
+    time.sleep(5)
+
+    fan.turn_fan_off()
+    time.sleep(2)
+    
+    fan.change_fan_speed(4)  # Back to off
+    time.sleep(1)
+
+    fan.change_fan_speed(5)  # Back to off
+    time.sleep(1)
+    
+except KeyboardInterrupt:
+    print("\nTest interrupted by user")
+    
+finally:
+    fan.cleanup()
+    print("Test complete")

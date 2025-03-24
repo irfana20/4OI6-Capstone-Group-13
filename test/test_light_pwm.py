@@ -61,3 +61,33 @@ class LightBulb:
         self.pwm.stop()
         GPIO.cleanup()
         print("Cleaned up resources.")
+
+# Test the light
+try:
+    print("Starting light bulb test with inverted PWM...")
+    light = LightBulb(pin=6)  # Use GPIO 6
+    
+    print("Testing brightness levels...")
+    light.change_brightness(0)  # Off
+    time.sleep(2)
+    
+    light.change_brightness(25)  # 75% brightness
+    time.sleep(5)
+
+    light.change_brightness(50)  # 75% brightness
+    time.sleep(5)
+    
+    light.change_brightness(75)  # Full brightness
+    time.sleep(5)
+    
+    light.change_brightness(100)  # Back to off
+    time.sleep(5)
+
+    light.turn_light_off()
+    
+except KeyboardInterrupt:
+    print("\nTest interrupted by user")
+    
+finally:
+    light.cleanup()
+    print("Test complete")

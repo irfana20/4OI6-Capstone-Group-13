@@ -1,9 +1,6 @@
 from lcd_i2c import LCD
 import RPi.GPIO as GPIO
 import time
-from step_motor import Step_Motor
-
-door_motor = Step_Motor()
 
 class Keypad:
     def __init__(self):
@@ -89,10 +86,7 @@ class Keypad:
         # Check PIN
         if inputPin == self.secretPin:
             self.lcd1.lcd_display("Access Granted", 1)
-            Step_Motor.open_door()
-            time.sleep(10)
-            Step_Motor.close_door()
-            time.sleep(2)
+            time.sleep(5)
             return True
         else:
             self.attempts_left -= 1
@@ -168,3 +162,6 @@ class Keypad:
             self.lcd1.lcd_display("Goodbye!", 1)
             time.sleep(2)
             GPIO.cleanup()
+
+keypad1 = Keypad()
+keypad1.main()
