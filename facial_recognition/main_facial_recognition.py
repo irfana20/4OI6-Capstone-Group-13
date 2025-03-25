@@ -5,7 +5,7 @@ import os
 
 from camera_stream import app as flask_app
 from recognize_faces import recognize_faces
-from listener_firestore import on_snapshot
+from listener_firestore import on_snapshot, start_firestore_listener
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from initialize_app import InitApp
 
