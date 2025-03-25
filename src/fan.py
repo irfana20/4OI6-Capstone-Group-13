@@ -2,7 +2,7 @@ import RPi.GPIO as GPIO
 import time
 
 class Fan:
-    def __init__(self, pin=5, freq=20):
+    def __init__(self, pin, freq=20):
         self.FAN_PIN = pin
         self.PWM_FREQ = freq
         

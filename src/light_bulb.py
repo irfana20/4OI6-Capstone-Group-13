@@ -2,7 +2,7 @@ import time
 import RPi.GPIO as GPIO
 
 class LightBulb:
-    def __init__(self, pwm_val=0, pin=6, freq=70):
+    def __init__(self,  pin, pwm_val=0, freq=70):
         # Pin that the light is connected to
         self.LIGHT_PIN = pin
         self.PWM_FREQ = freq

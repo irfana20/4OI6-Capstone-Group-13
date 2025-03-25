@@ -8,7 +8,9 @@ door_motor = Step_Motor()
 class Keypad:
     def __init__(self):
         # Define the GPIO pins for rows and columns
+        #                8,  7,  6,  5
         self.ROW_PINS = [26, 25, 24, 23]  # BCM numbering (Rows)
+        #                4,  3,  2,  1
         self.COL_PINS = [22, 27, 16, 12]  # BCM numbering (Columns)
 
         # Define the keypad layout
@@ -20,9 +22,10 @@ class Keypad:
         ]
 
         self.lcd1 = LCD()
+        self.changePin = False
 
         # Default secret PIN
-        self.secretPin = "4578"
+        self.secretPin = "4568"
         self.attempts_left = 3  # Max attempts before lockout
         self.lockout_time = 60  # 1-minute lockout
         self.locked_until = 0   # Timestamp when user can try again
@@ -64,21 +67,21 @@ class Keypad:
         """ Allows user to enter the PIN and checks if it matches secretPin. Blocks user after 3 failed attempts. """
         if time.time() < self.locked_until:
             wait_time = int(self.locked_until - time.time())
-            self.lcd1.lcd_display("Locked Out", 1)
-            self.lcd1.lcd_display(f"Wait {wait_time}s", 2)
+            self.lcd1.lcd_display("    Locked Out", 1)
+            self.lcd1.lcd_display(f"    Wait {wait_time}s", 2)
             time.sleep(1)  # Wait a bit before rechecking
             return False
 
         inputPin = ""
-        self.lcd1.lcd_display("Enter PIN:", 1)
+        self.lcd1.lcd_display("    Enter PIN:", 1)
 
         while True:
             key = self.read_keypad()
             if key == "C":  # Clear input
                 inputPin = ""
-                self.lcd1.lcd_display("PIN Cleared", 2)
+                self.lcd1.lcd_display("    PIN Cleared", 2)
                 time.sleep(1)
-                self.lcd1.lcd_display("Enter PIN:", 1)
+                self.lcd1.lcd_display("    Enter PIN:", 1)
                 continue
             elif key == "#":  # Submit PIN
                 break
@@ -88,32 +91,38 @@ class Keypad:
 
         # Check PIN
         if inputPin == self.secretPin:
-            self.lcd1.lcd_display("Access Granted", 1)
-            Step_Motor.open_door()
-            time.sleep(10)
-            Step_Motor.close_door()
+            self.lcd1.lcd_display("   Welcome Home!", 2)
+
+            # open the door if pin is entered, not when setting a new pin
+            if self.changePin == False:
+                door_motor.open_door()
+                time.sleep(3)
+                door_motor.close_door()
+
             time.sleep(2)
             return True
         else:
             self.attempts_left -= 1
-            self.lcd1.lcd_display("Incorrect PIN", 1)
-            self.lcd1.lcd_display(f"Attempts: {self.attempts_left}", 2)
+            self.lcd1.lcd_display(" Incorrect PIN", 2)
+            self.lcd1.lcd_display(f"   Attempts: {self.attempts_left}", 2)
             time.sleep(2)
 
             if self.attempts_left == 0:
                 self.locked_until = time.time() + self.lockout_time
-                self.lcd1.lcd_display("LOCKED OUT!", 1)
-                self.lcd1.lcd_display("Try in 1 min", 2)
+                self.lcd1.lcd_display(" LOCKED OUT!", 2)
+                time.sleep(1)
+                self.lcd1.lcd_display(" Try in 1 min", 2)
                 return False
 
         return False
 
 
     def set_new_pin(self):
-        self.lcd1.lcd_display("Change PIN", 1)
+        self.changePin = True
+        self.lcd1.lcd_display("   Change PIN", 1)
         if self.enter_pin():
             newPin = ""
-            self.lcd1.lcd_display("New PIN:", 1)
+            self.lcd1.lcd_display("  New PIN:", 1)
 
             while True:
                 key = self.read_keypad()
@@ -121,18 +130,19 @@ class Keypad:
                     newPin = ""
                     self.lcd1.lcd_display("PIN Cleared", 2)
                     time.sleep(1)
-                    self.lcd1.lcd_display("New PIN:", 1)
+                    self.lcd1.lcd_display("  New PIN:", 1)
                     continue
                 elif key == "#":
                     if len(newPin) >= 4:
                         self.secretPin = newPin
-                        self.lcd1.lcd_display("PIN Changed", 1)
+                        self.lcd1.lcd_display("   PIN Changed!", 2)
                         time.sleep(2)
+                        self.changePin = False
                         return
                     else:
                         self.lcd1.lcd_display("Min 4 Digits", 2)
                         time.sleep(2)
-                        self.lcd1.lcd_display("New PIN:", 1)
+                        self.lcd1.lcd_display("   New PIN:", 1)
                         continue
                 elif key.isdigit():
                     self.lcd1.lcd_display("*" * len(newPin) + "*", 2, clear=True)
@@ -143,28 +153,30 @@ class Keypad:
             while True:
                 if time.time() < self.locked_until:
                     wait_time = int(self.locked_until - time.time())
-                    self.lcd1.lcd_display("Locked Out", 1)
-                    self.lcd1.lcd_display(f"Wait {wait_time}s", 2)
+                    self.lcd1.lcd_display(" Locked Out!", 2)
+                    self.lcd1.lcd_display(f"   Wait {wait_time}s", 2)
                     time.sleep(5)
                     continue
 
-                #self.lcd1.lcd_display("1: Enter PIN", 1)
-                #self.lcd1.lcd_display("A: Change PIN", 2)
-                self.lcd1.lcd.write_string('    A: Enter PIN\r\n    B: Change PIN\r\n    C: Clear\r\n    D: Exit')
+                self.lcd1.lcd.clear()
+                self.lcd1.lcd.write_string('    A: Enter PIN\r\n    B: Change PIN\r\n    C: Clear\r\n')
                 choice = self.read_keypad()
 
                 if choice == "A":
+                    self.lcd1.lcd.clear()
                     self.enter_pin()
                 elif choice == "B":
+                    self.lcd1.lcd.clear()
                     self.set_new_pin()
-                elif choice == "D":
-                    self.lcd1.lcd_display("Exiting...", 1)
-                    self.lcd1.lcd_display("Have a great day!", 1)
-                    break
                 else:
-                    self.lcd1.lcd_display("Invalid Choice", 1)
+                    self.lcd1.lcd.clear()
+                    self.lcd1.lcd_display("    Invalid Choice", 2)
                     time.sleep(2)
         except KeyboardInterrupt:
-            self.lcd1.lcd_display("Goodbye!", 1)
+            self.lcd1.lcd_display("    Goodbye!", 2)
             time.sleep(2)
+            self.lcd1.lcd.clear()
             GPIO.cleanup()
+
+keypad1 = Keypad()
+keypad1.main()

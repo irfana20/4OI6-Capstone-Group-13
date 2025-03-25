@@ -5,7 +5,9 @@ import time
 class Keypad:
     def __init__(self):
         # Define the GPIO pins for rows and columns
+        #                8,  7,  6,  5
         self.ROW_PINS = [26, 25, 24, 23]  # BCM numbering (Rows)
+        #                4,  3,  2,  1
         self.COL_PINS = [22, 27, 16, 12]  # BCM numbering (Columns)
 
         # Define the keypad layout
