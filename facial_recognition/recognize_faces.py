@@ -4,13 +4,24 @@ import time
 import numpy as np
 import os
 import face_recognition
+from datetime import datetime, timedelta
 from picamera2 import Picamera2
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.step_motor import Step_Motor
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+from step_motor import Step_Motor
+from connect_to_app import ConnectToApp
 
 # DEFINE CONSTANTS
 FACE_DATA_FILE = "encodings.pickle"
+ALERT_COOLDOWN = 30 # Seconds
+
+# Initialize Firebase Admin SDK
+connect_app = ConnectToApp(
+    connected = True,
+    fan1 = None, bed_fan = None,
+    light1 = None, bed_light = None
+    )
 
 # *Facial recognition*
 def recognize_faces():
@@ -48,6 +59,9 @@ def recognize_faces():
     frame_count = 0  # Counts processed frames
     start_time = time.time()  # Time when processing started
     fps = 0  # Stores frames per second value
+    
+    # Track last alert time per person
+    last_alert_time = {}
 
     def process_frame(frame):
         nonlocal face_locations, face_encodings, face_names
@@ -66,6 +80,7 @@ def recognize_faces():
 
         # Loop through all detected face encodings
         face_names = []
+        
         for face_encoding in face_encodings:
             matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance = 0.5)
             name = "Unknown"
@@ -78,6 +93,16 @@ def recognize_faces():
                 name = known_face_names[best_match_index]
 
             face_names.append(name)
+            
+            # Send alert if someone is at the door
+            now = datetime.now()
+            last_sent = last_alert_time.get(name, datetime.min)
+            if (now - last_sent).total_seconds() > ALERT_COOLDOWN:
+                alert_msg = f"{name} is at the door" if name != "Unknown" else "Unknown person is at the door"
+                connect_app.send_alert(alert_msg)
+                last_alert_time[name] = now
+            else:
+                print(f"[INFO] Skipping alert for {name}, still in cooldown.")
             
             # If it's a known face AND door has not been opened
             if name != "Unknown" and not is_door_open and (current_time - last_open_time > open_cooldown):
