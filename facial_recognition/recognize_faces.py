@@ -15,6 +15,9 @@ from connect_to_app import ConnectToApp
 
 FACE_DATA_FILE = "encodings.pickle"
 ALERT_COOLDOWN = 15 # Seconds
+CV_SCALER = 5  # Scale factor for faster processing
+OPEN_COOLDOWN = 10 # We will wait this many seconds to open the door again
+OPEN_TIME = 10 # Keep the door open (seconds)
 
 # Initialize Firebase Admin SDK
 connect_app = ConnectToApp(
@@ -45,27 +48,24 @@ def recognize_faces():
     print("[INFO] Initializing motor...")
     motor = Step_Motor()
     last_open_time = 0
-    open_cooldown = 10 # We will wait this many seconds to open the door again
-    open_time = 10 # Keep the door open (seconds)
     is_door_open = False
-
-    cv_scaler = 5  # Scale factor for faster processing
+    
+    # Track last alert time per person
+    last_alert_time = {}
+    
     face_locations = []  # Stores detected face positions
     face_encodings = []  # Stores numerical face data
     face_names = []  # Stores names of detected faces
     frame_count = 0  # Counts processed frames
     start_time = time.time()  # Time when processing started
     fps = 0  # Stores frames per second value
-    
-    # Track last alert time per person
-    last_alert_time = {}
 
     def process_frame(frame):
         nonlocal face_locations, face_encodings, face_names
         nonlocal is_door_open, last_open_time 
         
         # Resize and convert the frame for faster processing
-        resized_frame = cv2.resize(frame, (0, 0), fx=(1/cv_scaler), fy=(1/cv_scaler))
+        resized_frame = cv2.resize(frame, (0, 0), fx=(1/CV_SCALER), fy=(1/CV_SCALER))
         rgb_resized_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
 
         # Detect faces and extract encodings
@@ -102,7 +102,7 @@ def recognize_faces():
                 print(f"[INFO] Skipping alert for {name}, still in cooldown.")
             
             # If it's a known face AND door has not been opened
-            if name != "Unknown" and not is_door_open and (current_time - last_open_time > open_cooldown):
+            if name != "Unknown" and not is_door_open and (current_time - last_open_time > OPEN_COOLDOWN):
                 # ^ If a known person is detected, the door is currently closed AND it's been more than cooldown (s) since door was last opened, then open the door
                 print(f"[INFO] Recognized a resident, opening door...")
                 motor.open_door()
@@ -110,7 +110,7 @@ def recognize_faces():
                 is_door_open = True
                 
         # Close the door after 10 seconds
-        if is_door_open and (current_time - last_open_time > open_time):
+        if is_door_open and (current_time - last_open_time > OPEN_TIME):
             print(f"[INFO] Closing door...")
             motor.close_door()
             is_door_open = False
@@ -121,10 +121,10 @@ def recognize_faces():
         # Iterate through each detected face and its corresponding name
         for (top, right, bottom, left), name in zip(face_locations, face_names):
             # Since face detection was performed on a resized frame, we scale up to match the original size
-            top *= cv_scaler
-            right *= cv_scaler
-            bottom *= cv_scaler
-            left *= cv_scaler
+            top *= CV_SCALER
+            right *= CV_SCALER
+            bottom *= CV_SCALER
+            left *= CV_SCALER
 
             # Draw a rectangle around the detected face
             cv2.rectangle(frame, (left, top), (right, bottom), (244, 42, 3), 3)
