@@ -3,7 +3,7 @@ from RPLCD.i2c import CharLCD
 class LCD:
     def __init__(self):
         # Initialize LCD (I2C address may vary, use 'i2cdetect -y 1' to find it)
-        self.lcd = CharLCD(i2c_expander='PCF8574', address=0x27, port=3, cols=20, rows=4)
+        self.lcd = CharLCD(i2c_expander='PCF8574', address=0x27, port=2, cols=20, rows=4)
 
     def lcd_display(self, message, line=1, clear=True):
         """

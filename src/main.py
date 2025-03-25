@@ -5,8 +5,6 @@ from temp_sensor import TempSensor
 from connect_to_app import ConnectToApp
 from keypad_lcd import Keypad
 
-import time
-import RPi.GPIO as GPIO
 import threading
 
 # To-do:
@@ -28,10 +26,15 @@ temp_sensor = TempSensor()
 door_keypad = Keypad()
 
 connection = ConnectToApp(False, Living_Room_Fan, Bedroom_Fan, Living_Room_Light, 
-                Bedrooom_Light, Entrance_Light, motion_sensor)
+                Bedrooom_Light, Entrance_Light, motion_sensor, temp_sensor)
 
 def start_keypad():
     door_keypad.main()
+
+def start_connection():
+    print("Entering connect_listeners...")
+    # listen for changes in status for fan and light bulb
+    connection.connect_listeners()
 
 def main():
 
@@ -44,9 +47,18 @@ def main():
     # start the keypad thread
     keypad_thread.start()
 
-    # listen for changes in status for fan and light bulb
-    connection.connect_listeners()
+    # create connection thread
+    connect_thread = threading.Thread(target = start_connection, args=())
+    # append to thread list for tracking
+    thread_list.append(connect_thread)
+    # daemon process runs in the background
+    connect_thread.daemon = True
+    # start the keypad thread
+    connect_thread.start()
 
+    # Wait for threads to complete
+    for thread in thread_list:
+        thread.join()
 
 if __name__ == "__main__":
     main()
