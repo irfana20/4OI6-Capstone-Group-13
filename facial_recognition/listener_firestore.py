@@ -85,6 +85,8 @@ def on_snapshot(col_snapshot, changes, read_time):
                 print(f"[INFO] No new photos to process for {resident_name}.")
 
 def start_firestore_listener():
+    firebase = InitApp()
+    db, _ = firebase.main()
     col_query = db.collection(u'resident_photos')
     col_query.on_snapshot(on_snapshot)
 
