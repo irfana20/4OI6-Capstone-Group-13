@@ -43,8 +43,6 @@ def main():
     keypad_thread.daemon = True
     # start the keypad thread
     keypad_thread.start()
-    
-    # initialize firebase
 
     # listen for changes in status for fan and light bulb
     connection.connect_listeners()
