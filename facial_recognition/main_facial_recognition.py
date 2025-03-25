@@ -4,7 +4,7 @@ import sys
 import os
 
 from camera_stream import app as flask_app
-from listener_firestore import os_snapshot, db
+from listener_firestore import on_snapshot, db
 from recognize_faces import recognize_faces
 
 def start_camera_stream():
@@ -23,9 +23,9 @@ def start_face_recognition():
     recognize_faces()
     
 def main():
-    camera_stream_thread = threading.thread(target = start_camera_stream)
-    firestore_thread = threading.thread(target = start_firestore)
-    face_recognition_thread = threading.thread(target = start_face_recognition)
+    camera_stream_thread = threading.Thread(target = start_camera_stream)
+    firestore_thread = threading.Thread(target = start_firestore)
+    face_recognition_thread = threading.Thread(target = start_face_recognition)
     
     camera_stream_thread.start()
     firestore_thread.start()
@@ -34,3 +34,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+
