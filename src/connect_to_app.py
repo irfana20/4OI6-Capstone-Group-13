@@ -23,10 +23,10 @@ class ConnectToApp:
         self.db_collect = self.db.collection("devices")
 
         # within devices collection, device1 document is the living room light
-        self.doc_ref_light = self.db_collect.document("device1")
+        self.doc_ref_living_light = self.db_collect.document("device1")
 
         # within devices collection, device2 document is the fan
-        self.doc_ref_fan = self.db_collect.document("device2")
+        self.doc_ref_living_fan = self.db_collect.document("device2")
 
         # within devices collection, device3 document is the temp variables
         self.doc_ref_current_temp = self.db_collect.document("device3")
@@ -49,30 +49,30 @@ class ConnectToApp:
         self.doc_ref_away = self.db_settings.document("awayMode")
     
     # Listener for Fan changes
-    def fan_listener(self, doc_snapshot, changes, read_time):
+    def living_fan_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
             print(f"Fan Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             fan_status = doc.get('Fan')
             if fan_status is not None:
                 if fan_status:  # If fan is not 0
                     print(f"Fan on at speed mode: {fan_status}")
-                    self.fan1.change_fan_speed(fan_status)  # Turn the fan on (active-low condition)
+                    self.living_fan.change_fan_speed(fan_status)  # Turn the fan on (active-low condition)
                 else:  # If fan is OFF
                     print("Fan off")
-                    self.fan1.turn_fan_off()  # Turn the fan off (active-low condition)
+                    self.living_fan.turn_fan_off()  # Turn the fan off (active-low condition)
 
     # Listener for living room light changes
-    def light_listener(self, doc_snapshot, changes, read_time):
+    def living_light_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
             print(f"Light Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             light_status = doc.get('Living_Room_Light')
             if light_status is not None:
                 if light_status:  # If light is ON
                     print(f"Light on at: {light_status}")
-                    self.light1.change_brightness(light_status)  # Turn the light on (active-low condition)
+                    self.living_light.change_brightness(light_status)  # Turn the light on (active-low condition)
                 else:  # If light is OFF
                     print("Light off")
-                    self.light1.turn_light_off()  # Turn the light off (active-low condition)
+                    self.living_light.turn_light_off()  # Turn the light off (active-low condition)
 
     # Listener for bedroom fan changes
     def bed_fan_listener(self, doc_snapshot, changes, read_time):
@@ -99,6 +99,19 @@ class ConnectToApp:
                 else:  # If light is OFF
                     print("Bedroom Light off")
                     self.bed_light.turn_light_off()  # Turn the light off (active-low condition)
+    
+    # Listener for bedroom light changes
+    def entrance_light_listener(self, doc_snapshot, changes, read_time):
+        for doc in doc_snapshot:
+            print(f"Entrance Light Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
+            light_status = doc.get('Entrance_Light')
+            if light_status is not None:
+                if light_status:  # If light is ON
+                    print(f"Entrance Light on at: {light_status}")
+                    self.entrance_light.change_brightness(light_status)  # Turn the light on (active-low condition)
+                else:  # If light is OFF
+                    print("Entrance Light off")
+                    self.entrance_light.turn_light_off()  # Turn the light off (active-low condition)
 
     # Listener for awayMode changes
     def away_mode_listener(self, doc_snapshot, changes, read_time):
@@ -137,11 +150,15 @@ class ConnectToApp:
 
     def connect_listeners(self):
         # Attach listeners to Firestore documents
-        self.doc_ref_fan.on_snapshot(self.fan_listener)
-        self.doc_ref_light.on_snapshot(self.light_listener)
-        self.doc_ref_away.on_snapshot(self.away_mode_listener)
+        self.doc_ref_living_fan.on_snapshot(self.living_fan_listener)
         self.doc_ref_bed_fan.on_snapshot(self.bed_fan_listener)
+        
+        self.doc_ref_living_light.on_snapshot(self.living_light_listener)
         self.doc_ref_bed_light.on_snapshot(self.bed_light_listener)
+        self.doc_ref_entrance_light.on_snapshot(self.entrance_light_listener)
+        
+        self.doc_ref_away.on_snapshot(self.away_mode_listener)
+
         self.doc_ref_desired_temp.on_snapshot(self.desired_temp_listener)
 
         try:

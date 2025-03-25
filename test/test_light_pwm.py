@@ -2,7 +2,7 @@ import time
 import RPi.GPIO as GPIO
 
 class LightBulb:
-    def __init__(self, pwm_val=0, pin=6, freq=70):
+    def __init__(self,  pin, pwm_val=0, freq=70):
         # Pin that the light is connected to
         self.LIGHT_PIN = pin
         self.PWM_FREQ = freq
@@ -27,7 +27,7 @@ class LightBulb:
 
         # Map 0-100 input range to 75-100 brightness range
         if brightness_percent < 100:
-            brightness_percent_new = (brightness_percent * 30 / 100) + 70
+            brightness_percent_new = (brightness_percent * 40 / 100) + 60
         else:
             brightness_percent_new = 100
         
@@ -65,7 +65,7 @@ class LightBulb:
 # Test the light
 try:
     print("Starting light bulb test with inverted PWM...")
-    light = LightBulb(pin=6)  # Use GPIO 6
+    light = LightBulb(6)  # Use GPIO 18
     
     print("Testing brightness levels...")
     light.change_brightness(0)  # Off
