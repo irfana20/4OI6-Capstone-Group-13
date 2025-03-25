@@ -18,6 +18,9 @@ db, bucket = firebase.main()
        
 def start_face_recognition():
     print("[MAIN] Starting face recognition and Flask camera stream...")
+    
+    face_thread = threading.Thread(target = run_face_recognition)
+    face_thread.start()
     flask_app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
     
 def main():
