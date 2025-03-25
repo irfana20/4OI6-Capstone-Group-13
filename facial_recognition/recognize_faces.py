@@ -14,7 +14,7 @@ from connect_to_app import ConnectToApp
 
 
 FACE_DATA_FILE = "encodings.pickle"
-ALERT_COOLDOWN = 30 # Seconds
+ALERT_COOLDOWN = 15 # Seconds
 
 # Initialize Firebase Admin SDK
 connect_app = ConnectToApp(
