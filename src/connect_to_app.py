@@ -3,12 +3,12 @@ from firebase_admin import credentials, firestore
 import time
 import RPi.GPIO as GPIO
 from datetime import datetime
+from get_db import GetDB
 
 class ConnectToApp:
 
     # fan and light inputs must be objects of the fan and light classes
-    def __init__(self, connected, living_fan, bed_fan, living_light, bed_light, entrance_light, motion_sensor):        
-        self.connected = connected
+    def __init__(self, living_fan, bed_fan, living_light, bed_light, entrance_light, motion_sensor):        
         self.living_fan = living_fan
         self.bed_fan = bed_fan
         self.living_light = living_light
@@ -17,7 +17,7 @@ class ConnectToApp:
         self.motion_sensor = motion_sensor
 
         # set database "db" to firestore client
-        self.db = firestore.client()
+        self.db, self.bucket = GetDB().get_db_bucket
 
         # collected is called "devices" for fan/light
         self.db_collect = self.db.collection("devices")
@@ -47,9 +47,6 @@ class ConnectToApp:
 
         # within settings collection, awayMode document has the variable for isAway
         self.doc_ref_away = self.db_settings.document("awayMode")
-
-    def initialize_firebase(self):
-        self.connected = True
     
     # Listener for Fan changes
     def fan_listener(self, doc_snapshot, changes, read_time):

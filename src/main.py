@@ -45,13 +45,6 @@ def main():
     keypad_thread.start()
     
     # initialize firebase
-    connection.initialize_firebase()
-
-    # check if connected to database
-    if (connection.is_connected()):
-        print("Connected to database")
-    else:
-        ("Could not connect to database")
 
     # listen for changes in status for fan and light bulb
     connection.connect_listeners()
