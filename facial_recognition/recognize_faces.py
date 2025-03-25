@@ -8,9 +8,9 @@ import face_recognition
 from datetime import datetime, timedelta
 from picamera2 import Picamera2
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
-from step_motor import Step_Motor
-from connect_to_app import ConnectToApp
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from src.step_motor import Step_Motor
+from initialize_app import InitApp
 
 
 FACE_DATA_FILE = "encodings.pickle"
@@ -19,13 +19,25 @@ CV_SCALER = 5  # Scale factor for faster processing
 OPEN_COOLDOWN = 10 # We will wait this many seconds to open the door again
 OPEN_TIME = 10 # Keep the door open (seconds)
 
-# Initialize Firebase Admin SDK
-connect_app = ConnectToApp(
-    connected = True,
-    living_fan = None, bed_fan = None,
-    living_light = None, bed_light = None,
-    entrance_light = None, motion_sensor = None
-    )
+def send_alert(self, message, doc_name=None):
+    # if no document name is given
+    if doc_name is None:
+        # Use a timestamp-based document name
+        doc_name = f"alert_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    
+    alert_data = {
+        "message": message,
+        "notification": {
+            "title": "Motion Detected",
+            "body": "Known vs unknown!"
+        },
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    # save the alert to firestore database under the alerts collection
+    self.db.collection("alerts").document(doc_name).set(alert_data)
+    print(f"Alert sent successfully with document name: {doc_name}")
+
 
 def recognize_faces():
     print("[INFO] Loading saved face encodings...")
@@ -58,7 +70,7 @@ def recognize_faces():
     face_names = []  # Stores names of detected faces
     frame_count = 0  # Counts processed frames
     start_time = time.time()  # Time when processing started
-    fps = 0  # Stores frames per second value
+    #fps = 0  # Stores frames per second value
 
     def process_frame(frame):
         nonlocal face_locations, face_encodings, face_names
@@ -96,7 +108,7 @@ def recognize_faces():
             last_sent = last_alert_time.get(name, datetime.min)
             if (now - last_sent).total_seconds() > ALERT_COOLDOWN:
                 alert_msg = f"{name} is at the door" if name != "Unknown" else "Unknown person is at the door"
-                connect_app.send_alert(alert_msg)
+                send_alert(alert_msg)
                 last_alert_time[name] = now
             else:
                 print(f"[INFO] Skipping alert for {name}, still in cooldown.")
