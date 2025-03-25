@@ -4,27 +4,25 @@ import sys
 import os
 
 from camera_stream import app as flask_app
-from listener_firestore import on_snapshot, db
 from recognize_faces import recognize_faces
+from listener_firestore import on_snapshot
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from initialize_app import InitApp
+
+firebase = InitApp()
+db, bucket = firebase.main()
 
 def start_camera_stream():
     print("[MAIN] Starting Flask camera stream...")
     flask_app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
-    
-def start_firestore():
-    print
-    col_query = db.collection(u'resident_photos')
-    col_query.on_snapshot(on_snapshot)
-    while True:
-        time.sleep(60)
-        
+       
 def start_face_recognition():
     print("[MAIN] Starting face recognition...")
     recognize_faces()
     
 def main():
     camera_stream_thread = threading.Thread(target = start_camera_stream)
-    firestore_thread = threading.Thread(target = start_firestore)
+    firestore_thread = threading.Thread(target = start_firestore_listener)
     face_recognition_thread = threading.Thread(target = start_face_recognition)
     
     camera_stream_thread.start()
