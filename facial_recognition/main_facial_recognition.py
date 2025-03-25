@@ -11,11 +11,7 @@ from initialize_app import InitApp
 
 firebase = InitApp()
 db, bucket = firebase.main()
-#
-# def start_camera_stream():
-#     print("[MAIN] Starting Flask camera stream...")
-#     flask_app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
-       
+
 def start_face_recognition():
     print("[MAIN] Starting face recognition and Flask camera stream...")
     
