@@ -25,10 +25,7 @@ picam2.start()
 # Shared global frame
 latest_frame = None
 
-
-# -------------------------------
-# CAMERA STREAM FOR THE APP
-# -------------------------------
+# Camera stream for the app
 def generate_frames():
     global latest_frame
     while True:
@@ -48,9 +45,7 @@ def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-# -------------------------------
-# FACE RECOGNITION BACKGROUND THREAD
-# -------------------------------
+# Face recognition (background thread)
 def send_alert(db, message, doc_name=None):
     if doc_name is None:
         doc_name = f"alert_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -67,8 +62,11 @@ def send_alert(db, message, doc_name=None):
 
 
 def run_face_recognition():
+    print("[INFO] Waiting for encodings.pickle to be created...")
+    while not os.path.exists("encodings.pickle"):
+        time.sleep(2)
+        
     print("[INFO] Loading saved face encodings...")
-
     # Open and load encodings from the pickle file
     with open("encodings.pickle", "rb") as file:
         face_data = pickle.load(file)
