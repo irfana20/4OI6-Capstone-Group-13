@@ -9,7 +9,7 @@ app = Flask(__name__)
 picam2 = Picamera2()
 
 # Configure camera resolution and format (adjust size if needed)
-picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
+picam2.configure(picam2.create_video_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
 
 # Start the camera
 picam2.start()
@@ -35,3 +35,4 @@ def video_feed():
 if __name__ == '__main__':
     # Run Flask on all interfaces, port 5000
     app.run(host='0.0.0.0', port=5000)
+

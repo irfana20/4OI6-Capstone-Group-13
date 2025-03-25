@@ -5,6 +5,9 @@ import numpy as np
 import os
 import face_recognition
 from picamera2 import Picamera2
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from src.step_motor import Step_Motor
 
 # DEFINE CONSTANTS
 FACE_DATA_FILE = "encodings.pickle"
@@ -27,10 +30,18 @@ def recognize_faces():
     # Initialize the camera module
     print("[INFO] Initializing camera...")
     picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (1024, 768)}))
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
     picam2.start()
+    
+    # Initialize motor and set time parameters
+    print("[INFO] Initializing motor...")
+    motor = Step_Motor()
+    last_open_time = 0
+    open_cooldown = 10 # We will wait this many seconds to open the door again
+    open_time = 10 # Keep the door open (seconds)
+    is_door_open = False
 
-    cv_scaler = 10  # Scale factor for faster processing
+    cv_scaler = 5  # Scale factor for faster processing
     face_locations = []  # Stores detected face positions
     face_encodings = []  # Stores numerical face data
     face_names = []  # Stores names of detected faces
@@ -40,6 +51,7 @@ def recognize_faces():
 
     def process_frame(frame):
         nonlocal face_locations, face_encodings, face_names
+        nonlocal is_door_open, last_open_time 
         
         # Resize and convert the frame for faster processing
         resized_frame = cv2.resize(frame, (0, 0), fx=(1/cv_scaler), fy=(1/cv_scaler))
@@ -49,10 +61,13 @@ def recognize_faces():
         face_locations = face_recognition.face_locations(rgb_resized_frame)
         face_encodings = face_recognition.face_encodings(rgb_resized_frame, face_locations, model='large')
 
+        # Get the current time
+        current_time = time.time()
+
         # Loop through all detected face encodings
         face_names = []
         for face_encoding in face_encodings:
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance = 0.5)
             name = "Unknown"
 
             # Compute the distance between the detected face and all known faces
@@ -63,6 +78,20 @@ def recognize_faces():
                 name = known_face_names[best_match_index]
 
             face_names.append(name)
+            
+            # If it's a known face AND door has not been opened
+            if name != "Unknown" and not is_door_open and (current_time - last_open_time > open_cooldown):
+                # ^ If a known person is detected, the door is currently closed AND it's been more than cooldown (s) since door was last opened, then open the door
+                print(f"[INFO] Recognized a resident, opening door...")
+                motor.open_door()
+                last_open_time = current_time # Saving the current time so we know when the door was last opened
+                is_door_open = True
+                
+        # Close the door after 10 seconds
+        if is_door_open and (current_time - last_open_time > open_time):
+            print(f"[INFO] Closing door...")
+            motor.close_door()
+            is_door_open = False
 
         return frame
 
@@ -106,6 +135,7 @@ def recognize_faces():
     while True:
         # Capture a frame from the camera
         frame = picam2.capture_array()
+#         time.sleep(5)
         # Process the frame 
         processed_frame = process_frame(frame)
         # Draw bounding boxes and labels around detected faces
@@ -129,3 +159,4 @@ def recognize_faces():
 
 if __name__ == "__main__":
     recognize_faces()
+
