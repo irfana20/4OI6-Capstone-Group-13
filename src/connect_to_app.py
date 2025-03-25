@@ -3,6 +3,7 @@ from firebase_admin import credentials, firestore
 import time
 import RPi.GPIO as GPIO
 from datetime import datetime
+import threading
 
 import sys
 import os
@@ -30,7 +31,9 @@ class ConnectToApp:
 
         # set database "db" to firestore client
         init_app = InitApp()
+        print("Firebase initialized")
         self.db, self.bucket = init_app.main()
+        print("Firebase db receieved")
 
         # collected is called "devices" for fan/light
         self.db_collect = self.db.collection("devices")
@@ -172,15 +175,11 @@ class ConnectToApp:
                     print(f"Away mode active: {away_status}")
                 else:  # If away mode is OFF (i.e. home)
                     print(f"Away mode not active: {away_status}")
-                
                 # call motion detection to activate if away mode is set
                 self.motion_detection(away_status)
 
     # motion detection using motion sensor for away mode (intruder alert)
     def motion_detection(self, away_mode):
-        # use the motion sensor to check motion detection
-        result = self.motion_sensor.check_motion()
-
         # turn off all the lights
         if (away_mode):
             self.living_light.turn_light_off()
@@ -195,10 +194,12 @@ class ConnectToApp:
 
         # "activate alarm"
         # while away mode is active ("alarm system on")
-        while(away_mode):
+        while away_mode:
+            # use the motion sensor to check motion detection
+            result = self.motion_sensor.check_motion()
             # if there is motion detected, send an alert
             if(result == "Movement detected"):
-                self.send_alert("Intruder!", "Intrusion")
+                self.send_alert("Intruder!", "Intrusion_Alert")
 
     # Listener for desired temp changes
     def desired_temp_listener(self, doc_snapshot, changes, read_time):
@@ -221,15 +222,31 @@ class ConnectToApp:
     # Listener for current temp changes
     def current_temp_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"Current Temp Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
-            prev_temp = doc.get('currentTemp')
-            while True:
-                current_temp_val = self.temp_sensor.read_temp()
+            print(f"Current Temp Listener Snapshot: {doc.to_dict()}")  # Debugging
+            prev_temp = doc.to_dict().get('currentTemp', 0)  # Default to 0 if missing
+            self.start_temp_monitor(prev_temp)
 
-                # if temp changed, update
-                if(prev_temp != current_temp_val):
-                    print(f"Current Temp: {current_temp_val}")
-                    self.update_current_temp(current_temp_val)
+    # Start Monitoring Temperature in a Background Thread
+    def start_temp_monitor(self, prev_temp):
+        thread = threading.Thread(target=self.check_temp, args=(prev_temp,))
+        thread.daemon = True
+        thread.start()
+
+    # Check Temperature Changes and Update Firestore
+    def check_temp(self, prev_temp):
+        while True:
+            current_temp_val = self.temp_sensor.read_temp()
+
+            if prev_temp != current_temp_val:
+                print(f"Temperature Changed: {current_temp_val}")
+
+                try:
+                    self.doc_ref_current_temp.set({'currentTemp': current_temp_val}, merge=True)
+                    prev_temp = current_temp_val  # Store locally, avoid Firestore reads
+                except Exception as e:
+                    print(f"Error updating Firestore: {e}")
+
+            time.sleep(2)  # Delay between readings
 
     def connect_listeners(self):
         # Attach listeners to Firestore documents
@@ -245,23 +262,23 @@ class ConnectToApp:
         self.doc_ref_desired_temp.on_snapshot(self.desired_temp_listener)
         self.doc_ref_current_temp.on_snapshot(self.current_temp_listener)
 
-        try:
-            while True:
-                # Keep the program running to listen for updates
+        # Keep the thread alive and listening
+        while True:
+            try:
                 print("Listening for changes in Firestore...")
-                time.sleep(1)
+                time.sleep(10)  # Check every 10 seconds
 
-        except KeyboardInterrupt:
-            print("Exiting program now...")
+            except KeyboardInterrupt:
+                print("Exiting program now...")
 
-            self.living_fan.turn_fan_off()
-            self.bed_fan.turn_fan_off()
-            print("turned off all fans")
+                self.living_fan.turn_fan_off()
+                self.bed_fan.turn_fan_off()
+                print("turned off all fans")
 
-            self.living_light.turn_light_off()
-            self.bed_light.turn_light_off()
-            self.entrance_light.turn_light_off()
-            print("turned off all lights")
+                self.living_light.turn_light_off()
+                self.bed_light.turn_light_off()
+                self.entrance_light.turn_light_off()
+                print("turned off all lights")
 
     def send_alert(self, message, doc_name=None):
         # if no document name is given
@@ -271,16 +288,9 @@ class ConnectToApp:
         
         alert_data = {
             "message": message,
-            "notification": {
-                "title": "Motion Detected",
-                "body": "Known vs unknown!"
-            },
             "timestamp": datetime.now().isoformat()
         }
         
         # save the alert to firestore database under the alerts collection
         self.db.collection("alerts").document(doc_name).set(alert_data)
         print(f"Alert sent successfully with document name: {doc_name}")
-
-    def is_connected(self):
-        return self.connected

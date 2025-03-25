@@ -170,13 +170,10 @@ class Keypad:
                     self.set_new_pin()
                 else:
                     self.lcd1.lcd.clear()
-                    self.lcd1.lcd_display("    Invalid Choice", 2)
+                    self.lcd1.lcd_display("  Invalid Choice", 2)
                     time.sleep(2)
         except KeyboardInterrupt:
             self.lcd1.lcd_display("    Goodbye!", 2)
             time.sleep(2)
             self.lcd1.lcd.clear()
             GPIO.cleanup()
-
-keypad1 = Keypad()
-keypad1.main()
