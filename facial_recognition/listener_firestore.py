@@ -5,46 +5,32 @@ import os
 import time
 from train_faces import train_faces  # Your existing training function
 
-# ------------------------- #
-# ✅ CONFIGURATION
-# ------------------------- #
-CREDENTIALS_FILE = "capstone-app-59cf7-firebase-adminsdk-62bt7-90f6bae67f.json"
-BUCKET_NAME = "capstone-app-59cf7.appspot.com"  # Match your Firebase bucket exactly
-PROCESSED_PHOTOS_FILE = 'processed_photos.txt'
-
-# ------------------------- #
-# ✅ INITIALIZE FIREBASE
-# ------------------------- #
-cred = credentials.Certificate(CREDENTIALS_FILE)
+# Initialize Firebase Admin SDK
+cred = credentials.Certificate("capstone-app-59cf7.json")
 firebase_admin.initialize_app(cred, {
-    'storageBucket': BUCKET_NAME
+    'storageBucket': "capstone-app-59cf7.appspot.com"
 })
 
 db = firestore.client()
 bucket = storage.bucket()
 
-# ------------------------- #
-# ✅ PROCESSED PHOTOS TRACKING
-# ------------------------- #
+# Track which photos have been processed
 def load_processed_photos():
     """Load already processed photo paths from a file."""
-    if not os.path.exists(PROCESSED_PHOTOS_FILE):
+    if not os.path.exists('processed_photos.txt'):
         return set()
 
-    with open(PROCESSED_PHOTOS_FILE, 'r') as file:
+    with open('processed_photos.txt', 'r') as file:
         return set(line.strip() for line in file)
 
 def save_processed_photo(photo_path):
     """Save a newly processed photo path to the file."""
-    with open(PROCESSED_PHOTOS_FILE, 'a') as file:
+    with open('processed_photos.txt', 'a') as file:
         file.write(f"{photo_path}\n")
 
 # Initialize processed photos tracking at startup
 processed_photos = load_processed_photos()
 
-# ------------------------- #
-# ✅ DOWNLOAD IMAGE
-# ------------------------- #
 def download_and_save_image(resident_name, image_url):
     """Download a photo from Firebase Storage URL and save it locally."""
     dataset_folder = os.path.join(os.getcwd(), 'dataset')
@@ -59,9 +45,6 @@ def download_and_save_image(resident_name, image_url):
     urllib.request.urlretrieve(image_url, local_file_path)
     print(f"[INFO] Image saved to {local_file_path}")
 
-# ------------------------- #
-# ✅ FIRESTORE SNAPSHOT LISTENER
-# ------------------------- #
 def on_snapshot(col_snapshot, changes, read_time):
     global processed_photos
     for change in changes:
@@ -108,17 +91,13 @@ def on_snapshot(col_snapshot, changes, read_time):
             else:
                 print(f"[INFO] No new photos to process for {resident_name}.")
 
-# ------------------------- #
-# ✅ START LISTENING
-# ------------------------- #
-col_query = db.collection(u'resident_photos')
-col_query.on_snapshot(on_snapshot)
+def start_firestore_listener():
+    col_query = db.collection(u'resident_photos')
+    col_query.on_snapshot(on_snapshot)
 
-print("[INFO] Listening for new or updated Firestore documents...")
+    print("[INFO] Listening for new or updated Firestore documents...")
 
-# Keep the script alive
-try:
     while True:
         time.sleep(60)
-except KeyboardInterrupt:
-    print("[INFO] Exiting listener.")
+
+
