@@ -165,13 +165,6 @@ def recognize_faces():
         processed_frame = process_frame(frame)
         # Draw bounding boxes and labels around detected faces
         display_frame = draw_results(processed_frame)
-        # Calculate the FPS
-        current_fps = calculate_fps()
-
-        # Overlay the FPS counter on the frame
-        # cv2.putText(image, text, position, font, font_scale, color, thickness)
-        cv2.putText(display_frame, f"FPS: {current_fps:.1f}", (display_frame.shape[1] - 150, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         cv2.imshow('Video', display_frame)
 
