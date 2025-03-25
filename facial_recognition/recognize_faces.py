@@ -1,30 +1,59 @@
-import pickle
-import cv2
+from flask import Flask, Response
+import threading
 import time
+import cv2
+import pickle
 import numpy as np
-import os
-import sys
 import face_recognition
-from datetime import datetime, timedelta
+from datetime import datetime
 from picamera2 import Picamera2
+import sys
+import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.step_motor import Step_Motor
 from initialize_app import InitApp
+from src.step_motor import Step_Motor
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Initialize Picamera2 only once
+picam2 = Picamera2()
+picam2.configure(picam2.create_video_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
+picam2.start()
+
+# Shared global frame
+latest_frame = None
 
 
-FACE_DATA_FILE = "encodings.pickle"
-ALERT_COOLDOWN = 15 # Seconds
-CV_SCALER = 5  # Scale factor for faster processing
-OPEN_COOLDOWN = 10 # We will wait this many seconds to open the door again
-OPEN_TIME = 10 # Keep the door open (seconds)
+# -------------------------------
+# CAMERA STREAM FOR THE APP
+# -------------------------------
+def generate_frames():
+    global latest_frame
+    while True:
+        frame = picam2.capture_array()
+        latest_frame = frame.copy()  # Save for face recognition
 
-def send_alert(self, message, doc_name=None):
-    # if no document name is given
+        # Convert to JPEG for MJPEG streaming
+        ret, buffer = cv2.imencode('.jpg', frame)
+        frame_bytes = buffer.tobytes()
+
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+# -------------------------------
+# FACE RECOGNITION BACKGROUND THREAD
+# -------------------------------
+def send_alert(db, message, doc_name=None):
     if doc_name is None:
-        # Use a timestamp-based document name
         doc_name = f"alert_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
     alert_data = {
         "message": message,
         "notification": {
@@ -33,143 +62,99 @@ def send_alert(self, message, doc_name=None):
         },
         "timestamp": datetime.now().isoformat()
     }
-    
-    # save the alert to firestore database under the alerts collection
-    self.db.collection("alerts").document(doc_name).set(alert_data)
+    db.collection("alerts").document(doc_name).set(alert_data)
     print(f"Alert sent successfully with document name: {doc_name}")
 
 
-def recognize_faces():
+def run_face_recognition():
     print("[INFO] Loading saved face encodings...")
 
     # Open and load encodings from the pickle file
-    with open(FACE_DATA_FILE, "rb") as file:
-        face_data = pickle.load(file)  # Directly loads the dictionary
+    with open("encodings.pickle", "rb") as file:
+        face_data = pickle.load(file)
 
-    # Extract encodings and names
     known_face_encodings = face_data["encodings"]
     known_face_names = face_data["names"]
 
-    # Initialize the camera module
-    print("[INFO] Initializing camera...")
-    picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
-    picam2.start()
-    
-    # Initialize motor and set time parameters
-    print("[INFO] Initializing motor...")
+    # Initialize Firebase + Step Motor
+    firebase = InitApp()
+    db, _ = firebase.main()
     motor = Step_Motor()
+
+    ALERT_COOLDOWN = 15
+    OPEN_COOLDOWN = 10
+    OPEN_TIME = 10
+
     last_open_time = 0
-    is_door_open = False
-    
-    # Track last alert time per person
     last_alert_time = {}
-    
-    face_locations = []  # Stores detected face positions
-    face_encodings = []  # Stores numerical face data
-    face_names = []  # Stores names of detected faces
-    frame_count = 0  # Counts processed frames
-    start_time = time.time()  # Time when processing started
-    #fps = 0  # Stores frames per second value
+    is_door_open = False
 
-    def process_frame(frame):
-        nonlocal face_locations, face_encodings, face_names
-        nonlocal is_door_open, last_open_time 
-        
-        # Resize and convert the frame for faster processing
-        resized_frame = cv2.resize(frame, (0, 0), fx=(1/CV_SCALER), fy=(1/CV_SCALER))
-        rgb_resized_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
+    print("[INFO] Face recognition is running in the background...")
 
-        # Detect faces and extract encodings
-        face_locations = face_recognition.face_locations(rgb_resized_frame)
-        face_encodings = face_recognition.face_encodings(rgb_resized_frame, face_locations, model='large')
+    while True:
+        if latest_frame is None:
+            time.sleep(0.1)
+            continue
 
-        # Get the current time
+        frame = latest_frame.copy()
+
+        # Resize for faster processing
+        resized_frame = cv2.resize(frame, (0, 0), fx=0.2, fy=0.2)
+        rgb_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
+
+        # Detect faces
+        face_locations = face_recognition.face_locations(rgb_frame)
+        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+
         current_time = time.time()
 
-        # Loop through all detected face encodings
-        face_names = []
-        
         for face_encoding in face_encodings:
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance = 0.5)
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance=0.5)
             name = "Unknown"
-
-            # Compute the distance between the detected face and all known faces
-            # The lower the distance, the better the match
             face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-            best_match_index = np.argmin(face_distances)
-            if matches[best_match_index]:
-                name = known_face_names[best_match_index]
 
-            face_names.append(name)
-            
-            # Send alert if someone is at the door
+            if len(face_distances) > 0:
+                best_match_index = np.argmin(face_distances)
+                if matches[best_match_index]:
+                    name = known_face_names[best_match_index]
+
+            # Handle alert cooldown
             now = datetime.now()
             last_sent = last_alert_time.get(name, datetime.min)
             if (now - last_sent).total_seconds() > ALERT_COOLDOWN:
-                alert_msg = f"{name} is at the door" if name != "Unknown" else "Unknown person is at the door"
-                send_alert(alert_msg)
+                msg = f"{name} is at the door" if name != "Unknown" else "Unknown person is at the door"
+                send_alert(db, msg)
                 last_alert_time[name] = now
             else:
                 print(f"[INFO] Skipping alert for {name}, still in cooldown.")
-            
-            # If it's a known face AND door has not been opened
+
+            # Handle motor door open
             if name != "Unknown" and not is_door_open and (current_time - last_open_time > OPEN_COOLDOWN):
-                # ^ If a known person is detected, the door is currently closed AND it's been more than cooldown (s) since door was last opened, then open the door
-                print(f"[INFO] Recognized a resident, opening door...")
+                print(f"[INFO] Recognized {name}, opening door...")
                 motor.open_door()
-                last_open_time = current_time # Saving the current time so we know when the door was last opened
+                last_open_time = current_time
                 is_door_open = True
-                
-        # Close the door after 10 seconds
+
+        # Handle door close after delay
         if is_door_open and (current_time - last_open_time > OPEN_TIME):
-            print(f"[INFO] Closing door...")
+            print("[INFO] Closing door...")
             motor.close_door()
             is_door_open = False
 
-        return frame
+        time.sleep(0.5)  # Prevents 100% CPU usage
 
-    def draw_results(frame):
-        # Iterate through each detected face and its corresponding name
-        for (top, right, bottom, left), name in zip(face_locations, face_names):
-            # Since face detection was performed on a resized frame, we scale up to match the original size
-            top *= CV_SCALER
-            right *= CV_SCALER
-            bottom *= CV_SCALER
-            left *= CV_SCALER
 
-            # Draw a rectangle around the detected face
-            cv2.rectangle(frame, (left, top), (right, bottom), (244, 42, 3), 3)
-
-            # Draw a filled rectangle for the label background (so text is visible)
-            cv2.rectangle(frame, (left - 3, top - 35), (right + 3, top), (244, 42, 3), cv2.FILLED)
-            font = cv2.FONT_HERSHEY_DUPLEX
-            # Write the name label on the face bounding box
-            cv2.putText(frame, name, (left + 6, top - 6), font, 1.0, (255, 255, 255), 1)
-
-        return frame
-
-    print("[INFO] Face recognition is running... Press 'q' to quit.")
-    # Start an infinite loop to continuously process video frames
-    while True:
-        # Capture a frame from the camera
-        frame = picam2.capture_array()
-#         time.sleep(5)
-        # Process the frame 
-        processed_frame = process_frame(frame)
-        # Draw bounding boxes and labels around detected faces
-        display_frame = draw_results(processed_frame)
-
-        cv2.imshow('Video', display_frame)
-
-        if cv2.waitKey(1) == ord("q"):
-            break
-
-    cv2.destroyAllWindows()
-    picam2.stop()
-    print("[INFO] Face recognition stopped.")
-
+# -------------------------------
+# MAIN ENTRY POINT
+# -------------------------------
 if __name__ == "__main__":
-    recognize_faces()
+    print("[MAIN] Starting combined stream and recognition...")
 
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False))
+    face_thread = threading.Thread(target=run_face_recognition)
 
+    flask_thread.start()
+    face_thread.start()
+
+    flask_thread.join()
+    face_thread.join()
