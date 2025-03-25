@@ -3,31 +3,28 @@ import cv2
 import time
 import numpy as np
 import os
+import sys
 import face_recognition
 from datetime import datetime, timedelta
 from picamera2 import Picamera2
-import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 from step_motor import Step_Motor
 from connect_to_app import ConnectToApp
 
-# DEFINE CONSTANTS
+
 FACE_DATA_FILE = "encodings.pickle"
 ALERT_COOLDOWN = 30 # Seconds
 
 # Initialize Firebase Admin SDK
 connect_app = ConnectToApp(
     connected = True,
-    fan1 = None, bed_fan = None,
-    light1 = None, bed_light = None
+    living_fan = None, bed_fan = None,
+    living_light = None, bed_light = None,
+    entrance_light = None, motion_sensor = None
     )
 
-# *Facial recognition*
 def recognize_faces():
-    """
-    This function initializes the camera and recognizes faces in real-time.
-    """
     print("[INFO] Loading saved face encodings...")
 
     # Open and load encodings from the pickle file
@@ -130,30 +127,15 @@ def recognize_faces():
             left *= cv_scaler
 
             # Draw a rectangle around the detected face
-            # cv2.rectangle(image, start_point, end_point, color, thickness)
             cv2.rectangle(frame, (left, top), (right, bottom), (244, 42, 3), 3)
 
             # Draw a filled rectangle for the label background (so text is visible)
-            # cv2.rectangle(image, start_point, end_point, color, fill_type)
             cv2.rectangle(frame, (left - 3, top - 35), (right + 3, top), (244, 42, 3), cv2.FILLED)
             font = cv2.FONT_HERSHEY_DUPLEX
             # Write the name label on the face bounding box
-            # cv2.putText(image, text, start_position, font, font_scale, color, thickness)
             cv2.putText(frame, name, (left + 6, top - 6), font, 1.0, (255, 255, 255), 1)
 
         return frame
-
-    def calculate_fps():
-        nonlocal frame_count, start_time, fps
-        frame_count += 1
-        # Calculate the elapsed time since the last FPS calculation
-        elapsed_time = time.time() - start_time
-        if elapsed_time > 1:
-            # Compute FPS as the number of frames processed divided by the elapsed time
-            fps = frame_count / elapsed_time
-            frame_count = 0
-            start_time = time.time()
-        return fps
 
     print("[INFO] Face recognition is running... Press 'q' to quit.")
     # Start an infinite loop to continuously process video frames
@@ -177,4 +159,5 @@ def recognize_faces():
 
 if __name__ == "__main__":
     recognize_faces()
+
 
