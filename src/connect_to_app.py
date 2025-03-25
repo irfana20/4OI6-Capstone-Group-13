@@ -7,13 +7,7 @@ from datetime import datetime
 class ConnectToApp:
 
     # fan and light inputs must be objects of the fan and light classes
-    def __init__(self, connected, living_fan, bed_fan, living_light, bed_light, entrance_light, motion_sensor):
-        # Initialize Firebase Admin SDK
-        cred = credentials.Certificate("/home/clara-capstone/Documents/capstone-app-59cf7.json")
-        firebase_admin.initialize_app(cred, {
-            'databaseURL': 'https://capstone-app-59cf7.firebaseio.com/'
-        })
-        
+    def __init__(self, connected, living_fan, bed_fan, living_light, bed_light, entrance_light, motion_sensor):        
         self.connected = connected
         self.living_fan = living_fan
         self.bed_fan = bed_fan

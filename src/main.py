@@ -44,17 +44,17 @@ def main():
     # start the keypad thread
     keypad_thread.start()
     
-    # # initialize firebase
-    # connection.initialize_firebase()
+    # initialize firebase
+    connection.initialize_firebase()
 
-    # # check if connected to database
-    # if (connection.is_connected()):
-    #     print("Connected to database")
-    # else:
-    #     ("Could not connect to database")
+    # check if connected to database
+    if (connection.is_connected()):
+        print("Connected to database")
+    else:
+        ("Could not connect to database")
 
-    # # listen for changes in status for fan and light bulb
-    # connection.connect_listeners()
+    # listen for changes in status for fan and light bulb
+    connection.connect_listeners()
 
 
 if __name__ == "__main__":
