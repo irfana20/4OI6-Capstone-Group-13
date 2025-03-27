@@ -23,30 +23,30 @@ class Fan:
             speed_percent = 0
 
         elif speed_mode == 1:
-            speed_percent = 32
+            speed_percent = 11
 
         elif speed_mode == 2:
-            speed_percent = 67
+            speed_percent = 25
 
         elif speed_mode == 3:
             speed_percent = 100
         
         # Invert the percentage (100% becomes 0%, 0% becomes 100%)
-        inverted_percent = 100 - speed_percent
+        #inverted_percent = 100 - speed_percent
         
         # Apply the duty cycle
-        self.pwm.ChangeDutyCycle(inverted_percent)
-        print(f"Fan speed set to {speed_percent}% (PWM duty cycle: {inverted_percent}%)")
+        self.pwm.ChangeDutyCycle(speed_percent)
+        print(f"Fan speed set to {speed_percent}% (PWM duty cycle: {speed_percent}%)")
         time.sleep(0.5)  # Give time for the change to take effect
         
     def turn_fan_off(self):
         # To turn off, we need to set the PWM to 100% (inverted logic)
-        self.pwm.ChangeDutyCycle(100)
+        self.pwm.ChangeDutyCycle(0)
         print("Fan turned off")
         
     def turn_fan_on(self):
         # To turn on fully, we need to set the PWM to 0% (inverted logic)
-        self.pwm.ChangeDutyCycle(0)
+        self.pwm.ChangeDutyCycle(100)
         print("Fan turned on at full speed")
         
     def cleanup(self):

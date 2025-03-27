@@ -9,19 +9,14 @@ class TempSensor:
         self.bus = smbus2.SMBus(port)
         bme280.load_calibration_params(self.bus, self.address)
         self.ambient_temperature = current_temp
-    
-    def update_temp(self, temp):
-         return temp
 
     def read_temp(self):
         bme280_data = bme280.sample(self.bus, self.address)
-        while True:
-            try:
-                bme280_data = bme280.sample(self.bus, self.address)
-                self.ambient_temperature = bme280_data.temperature
-                print(self.ambient_temperature)
+        try:
+            bme280_data = bme280.sample(self.bus, self.address)
+            self.ambient_temperature = bme280_data.temperature
+            print(self.ambient_temperature)
 
-                self.update_temp(self.ambient_temperature)
-                sleep(1)
-            except RuntimeError as error:
-                    print(error.args[0])
+            return self.ambient_temperature
+        except RuntimeError as error:
+                print(error.args[0])

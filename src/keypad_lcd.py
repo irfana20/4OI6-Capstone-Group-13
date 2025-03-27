@@ -91,10 +91,9 @@ class Keypad:
 
         # Check PIN
         if inputPin == self.secretPin:
-            self.lcd1.lcd_display("   Welcome Home!", 2)
-
-            # open the door if pin is entered, not when setting a new pin
+            # only open the door if pin is entered, not when setting a new pin
             if self.changePin == False:
+                self.lcd1.lcd_display("   Welcome Home!", 2)
                 door_motor.open_door()
                 time.sleep(3)
                 door_motor.close_door()

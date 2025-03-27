@@ -20,7 +20,7 @@ def start_connection():
 
     Living_Room_Light = LightBulb(6)
     Bedrooom_Light = LightBulb(7)
-    Entrance_Light = LightBulb(18)
+    Entrance_Light = LightBulb(21)
 
     motion_sensor = Motion_Sensor()
     temp_sensor = TempSensor()

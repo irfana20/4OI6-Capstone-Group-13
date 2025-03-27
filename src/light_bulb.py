@@ -15,7 +15,7 @@ class LightBulb:
         
         # Initialize PWM
         self.pwm = GPIO.PWM(self.LIGHT_PIN, self.PWM_FREQ)
-        self.pwm.start(100)  # Start with 100% duty cycle (which is OFF with inverted logic)
+        self.pwm.start(0)  # Start with 100% duty cycle (which is OFF with inverted logic)
         
         # Set initial brightness (default is 0%)
         self.change_brightness(pwm_val)
@@ -25,29 +25,29 @@ class LightBulb:
         # Clamp the brightness value between 0 and 100%
         brightness_percent = max(0, min(100, brightness_percent))
 
-        # Map 0-100 input range to 75-100 brightness range
-        if brightness_percent < 100:
-            brightness_percent_new = (brightness_percent * 30 / 100) + 70
-        else:
-            brightness_percent_new = 100
+        # # Map 0-100 input range to 75-100 brightness range
+        # if brightness_percent < 100:
+        #     brightness_percent_new = (brightness_percent * 30 / 100) + 70
+        # else:
+        #     brightness_percent_new = 100
         
-        inverted_percent = 100 - brightness_percent_new
+        # inverted_percent = 100 - brightness_percent_new
 
 
         # Apply the inverted duty cycle
-        self.pwm.ChangeDutyCycle(inverted_percent)
+        self.pwm.ChangeDutyCycle(brightness_percent)
         
-        print(f"Brightness set to: {brightness_percent}% (PWM duty cycle: {inverted_percent}%)")
+        print(f"Brightness set to: {brightness_percent}% (PWM duty cycle: {brightness_percent}%)")
         time.sleep(0.1)
 
     def turn_light_off(self):
         # With inverted logic, 100% duty cycle turns the light off
-        self.pwm.ChangeDutyCycle(100)
+        self.pwm.ChangeDutyCycle(0)
         print("Light turned off\n")
         
     def turn_light_on(self):
         # With inverted logic, 0% duty cycle is full brightness
-        self.pwm.ChangeDutyCycle(0)
+        self.pwm.ChangeDutyCycle(100)
         print("Light turned on (full brightness)\n")
         
     def get_status(self):

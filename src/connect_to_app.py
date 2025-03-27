@@ -65,37 +65,37 @@ class ConnectToApp:
         self.doc_ref_away = self.db_settings.document("awayMode")
     
     def update_current_temp(self, new_temp):
-        # Update the 'current_temp' field in the 'device3' document
+        # Update the 'currentTemp' field in the 'device3' document
         self.doc_ref_current_temp.set({
-            'current_temp': new_temp
+            'currentTemp': new_temp
         }, merge=True)
 
     def update_living_fan(self, new_speed):
-        # Update the 'current_temp' field in the 'device3' document
+        # Update the 'Living_Room_Fan' field in the 'device3' document
         self.doc_ref_living_fan.set({
-            'Fan': new_speed
+            'Living_Room_Fan': new_speed
         }, merge=True)
 
     def update_bed_fan(self, new_speed):
-        # Update the 'current_temp' field in the 'device3' document
+        # Update the 'Bedroom_Fan' field in the 'device3' document
         self.doc_ref_bed_fan.set({
             'Bedroom_Fan': new_speed
         }, merge=True)
 
     def update_living_light(self, new_brightness):
-        # Update the 'current_temp' field in the 'device3' document
+        # Update the 'Living_Room_Light' field in the 'device3' document
         self.doc_ref_living_light.set({
             'Living_Room_Light': new_brightness
         }, merge=True)
 
     def update_bed_light(self, new_brightness):
-        # Update the 'current_temp' field in the 'device3' document
+        # Update the 'Bedroom_Light' field in the 'device3' document
         self.doc_ref_bed_light.set({
             'Bedroom_Light': new_brightness
         }, merge=True)
 
     def update_entrance_light(self, new_brightness):
-        # Update the 'current_temp' field in the 'device3' document
+        # Update the 'Entrance_Light' field in the 'device3' document
         self.doc_ref_entrance_light.set({
             'Entrance_Light': new_brightness
         }, merge=True)
@@ -104,15 +104,15 @@ class ConnectToApp:
     def living_fan_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
             print(f"Fan Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
-            fan_status = doc.get('Fan')
+            fan_status = doc.get('Living_Room_Fan')
             if fan_status is not None:
                 if fan_status:  # If fan is not 0
                     print(f"Fan on at speed mode: {fan_status}")
-                    self.living_fan.change_fan_speed(fan_status)  # Turn the fan on (active-low condition)
+                    self.living_fan.change_fan_speed(fan_status)
                 else:  # If fan is OFF
                     print("Fan off")
                     self.living_fan.turn_fan_off()  # Turn the fan off (active-low condition)
-
+    
     # Listener for bedroom fan changes
     def bed_fan_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
@@ -121,7 +121,7 @@ class ConnectToApp:
             if fan_status is not None:
                 if fan_status:  # If fan is not 0
                     print(f"Bedroom Fan an on at speed mode: {fan_status}")
-                    self.bed_fan.change_fan_speed(fan_status)  # Turn the fan on (active-low condition)
+                    self.bed_fan.change_fan_speed(fan_status)  # Turn the fan off (active-low condition)
                 else:  # If fan is OFF
                     print("Bedroom Fan off")
                     self.bed_fan.turn_fan_off()  # Turn the fan off (active-low condition)
@@ -137,7 +137,7 @@ class ConnectToApp:
                     self.living_light.change_brightness(light_status)  # Turn the light on (active-low condition)
                 else:  # If light is OFF
                     print("Light off")
-                    self.living_light.turn_light_off()  # Turn the light off (active-low condition)
+                    self.living_light.turn_light_off()
 
     # Listener for bedroom light changes
     def bed_light_listener(self, doc_snapshot, changes, read_time):
@@ -151,7 +151,7 @@ class ConnectToApp:
                 else:  # If light is OFF
                     print("Bedroom Light off")
                     self.bed_light.turn_light_off()  # Turn the light off (active-low condition)
-    
+
     # Listener for entrance light changes
     def entrance_light_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
@@ -164,7 +164,7 @@ class ConnectToApp:
                 else:  # If light is OFF
                     print("Entrance Light off")
                     self.entrance_light.turn_light_off()  # Turn the light off (active-low condition)
-
+                    
     # Listener for awayMode changes
     def away_mode_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
@@ -223,30 +223,19 @@ class ConnectToApp:
     def current_temp_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
             print(f"Current Temp Listener Snapshot: {doc.to_dict()}")  # Debugging
-            prev_temp = doc.to_dict().get('currentTemp', 0)  # Default to 0 if missing
-            self.start_temp_monitor(prev_temp)
+            prev_temp = doc.get('currentTemp') # get the currentTemp on app
+            self.update_temp(prev_temp)
 
-    # Start Monitoring Temperature in a Background Thread
-    def start_temp_monitor(self, prev_temp):
-        thread = threading.Thread(target=self.check_temp, args=(prev_temp,))
-        thread.daemon = True
-        thread.start()
+    def update_temp(self, prev_temp):
+        current_temp_val = self.temp_sensor.read_temp() # get the current temp from sensor
 
-    # Check Temperature Changes and Update Firestore
-    def check_temp(self, prev_temp):
-        while True:
-            current_temp_val = self.temp_sensor.read_temp()
+        # check if the temp changed
+        if prev_temp != current_temp_val:
+            print(f"Current temp (on app): {prev_temp}")
+            print(f"Temperature Changed to: {current_temp_val}")
+            # if temp changed, update currentTemp on app to the new temp
+            self.update_current_temp(current_temp_val)
 
-            if prev_temp != current_temp_val:
-                print(f"Temperature Changed: {current_temp_val}")
-
-                try:
-                    self.doc_ref_current_temp.set({'currentTemp': current_temp_val}, merge=True)
-                    prev_temp = current_temp_val  # Store locally, avoid Firestore reads
-                except Exception as e:
-                    print(f"Error updating Firestore: {e}")
-
-            time.sleep(2)  # Delay between readings
 
     def connect_listeners(self):
         # Attach listeners to Firestore documents
@@ -259,7 +248,7 @@ class ConnectToApp:
         
         self.doc_ref_away.on_snapshot(self.away_mode_listener)
 
-        self.doc_ref_desired_temp.on_snapshot(self.desired_temp_listener)
+        # self.doc_ref_desired_temp.on_snapshot(self.desired_temp_listener)
         self.doc_ref_current_temp.on_snapshot(self.current_temp_listener)
 
         # Keep the thread alive and listening

@@ -4,16 +4,18 @@ import time
 # Clean up
 GPIO.cleanup()
 
+LIGHT_PIN = 6
+
 # Set up
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(6, GPIO.OUT)
+GPIO.setup(LIGHT_PIN, GPIO.OUT)
 
 print("Light ON")
-GPIO.output(6, GPIO.LOW)  # Assuming LOW turns it on based on your inverted logic
+GPIO.output(LIGHT_PIN, GPIO.HIGH)  # Assuming LOW turns it on based on your inverted logic
 time.sleep(5)
 
 print("Light OFF")
-GPIO.output(6, GPIO.HIGH)  # Assuming HIGH turns it off
+GPIO.output(LIGHT_PIN, GPIO.LOW)  # Assuming HIGH turns it off
 time.sleep(2)
 
 # Clean up
