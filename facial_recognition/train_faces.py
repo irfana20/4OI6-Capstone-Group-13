@@ -46,8 +46,12 @@ def train_faces(new_photo_paths, resident_name, face_lock=None):
         "names": saved_names
     }
 
-    with open(FACE_DATA_FILE, "wb") as file:
-        pickle.dump(face_data, file)
+#     with open(FACE_DATA_FILE, "wb") as file:
+#         pickle.dump(face_data, file)
+    
+    with face_lock:
+        with open(FACE_DATA_FILE, "wb") as file:
+            pickle.dump(face_data, file)
 
     print("[INFO] Incremental training complete.")
 
