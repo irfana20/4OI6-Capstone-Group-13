@@ -77,9 +77,19 @@ def recognize_faces():
     Opens the door for known people and sends alerts
     '''
     global is_door_open, last_open_time, last_alert_time
+    last_reload_time = time.time()
+    reload_interval = 10 # Seconds
     known_face_encodings, known_face_names = load_face_data()
 
     while True:
+        current_time = time.time()
+        
+        if current_time - last_reload_time > reload_interval:
+            print("[INFO] Reloading face encodings from file...")
+            with face_lock:
+                known_face_encodings, known_face_names = load_face_data()
+            last_reload_time = current_time
+            
         frame = picam2.capture_array()
         # Resize and convert to RGB for recognition
         resized_frame = cv2.resize(frame, (0, 0), fx=(1/CV_SCALER), fy=(1/CV_SCALER))
@@ -89,7 +99,7 @@ def recognize_faces():
             face_locations = face_recognition.face_locations(rgb_frame)
             face_encodings = face_recognition.face_encodings(rgb_frame, face_locations, model='large')
 
-        current_time = time.time() #track time for cooldown
+        #current_time = time.time() #track time for cooldown
 
         # Compare faces for recognition
         for face_encoding in face_encodings:
@@ -108,6 +118,8 @@ def recognize_faces():
             if (now - last_sent).total_seconds() > ALERT_COOLDOWN:
                 send_alert(name)
                 last_alert_time[name] = now
+            else:
+                print(f"[INFO] {name} alert cooldown")
                 
             # Door logic for residents
             if name != "Unknown" and not is_door_open and (current_time - last_open_time > OPEN_COOLDOWN):
@@ -121,6 +133,7 @@ def recognize_faces():
             print(f"[INFO] Closing door...")
             motor.close_door()
             is_door_open = False
+
 
 def load_processed_photos():
     '''
