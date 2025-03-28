@@ -32,6 +32,8 @@ class FacialRec:
         init_app = InitApp()
         self.db, self.bucket = init_app.main()
 
+        print("Init from facial")
+
         self.motor = Step_Motor()
 
         self.last_open_time = 0 # Tracks when door was last open

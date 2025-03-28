@@ -4,7 +4,7 @@ import time
 # Clean up
 GPIO.cleanup()
 
-LIGHT_PIN = 6
+LIGHT_PIN = 21
 
 # Set up
 GPIO.setmode(GPIO.BCM)

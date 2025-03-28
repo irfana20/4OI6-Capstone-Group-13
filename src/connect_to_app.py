@@ -1,10 +1,5 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
 import time
-import RPi.GPIO as GPIO
 from datetime import datetime
-import threading
-
 import sys
 import os
 
@@ -29,11 +24,14 @@ class ConnectToApp:
         self.motion_sensor = motion_sensor
         self.temp_sensor = temp_sensor
 
+        # away mode logic variable
+        self.away_stop = False
+
         # set database "db" to firestore client
         init_app = InitApp()
-        print("Firebase initialized")
+        print("Firebase initialized from control")
         self.db, self.bucket = init_app.main()
-        print("Firebase db receieved")
+        print("Firebase db receieved from control")
 
         # collected is called "devices" for fan/light
         self.db_collect = self.db.collection("devices")
@@ -173,15 +171,17 @@ class ConnectToApp:
             if away_status is not None:
                 if away_status:  # If away mode is ON
                     print(f"Away mode active: {away_status}")
+                    # call motion detection to activate if away mode is set
+                    self.away_stop = False
+                    self.motion_detection()
                 else:  # If away mode is OFF (i.e. home)
                     print(f"Away mode not active: {away_status}")
-                # call motion detection to activate if away mode is set
-                self.motion_detection(away_status)
+                    self.away_stop = True
 
     # motion detection using motion sensor for away mode (intruder alert)
-    def motion_detection(self, away_mode):
-        # turn off all the lights
-        if (away_mode):
+    def motion_detection(self):
+        # turn off all the lights if isAway
+        if not self.away_stop:
             self.living_light.turn_light_off()
             self.update_living_light(0)
 
@@ -192,14 +192,15 @@ class ConnectToApp:
             self.update_entrance_light(0)
             print("turned off all lights")
 
-        # "activate alarm"
-        # while away mode is active ("alarm system on")
-        while away_mode:
+        # keep detecting motion while awaymode is turned on
+        while not self.away_stop:
             # use the motion sensor to check motion detection
             result = self.motion_sensor.check_motion()
             # if there is motion detected, send an alert
             if(result == "Movement detected"):
                 self.send_alert("Intruder!", "Intrusion_Alert")
+            
+            time.sleep(5)
 
     # Listener for desired temp changes
     def desired_temp_listener(self, doc_snapshot, changes, read_time):
@@ -207,17 +208,17 @@ class ConnectToApp:
             print(f"Desired Temp Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             desired_temp_status = doc.get('desiredTemp')
             current_temp_status = doc.get('currentTemp')
-            if desired_temp_status is not None:
-                print(f"Desired Temp: {desired_temp_status}, Current Temp: {current_temp_status}")
-                
-                # if we want cooler, turn on fan
-                if desired_temp_status < current_temp_status:
-                    self.living_fan.turn_fan_on()
-                    self.update_living_fan(3) # highest speed mode - 3
-                # else warmer, turn off fan (future, can turn on heat)
-                else:
-                    self.living_fan.turn_fan_off()
-                    self.update_living_fan(0) # off - speed mode 0
+            print(f"Desired Temp: {desired_temp_status}, Current Temp: {current_temp_status}")
+            
+            # if we want cooler, turn on fan
+            if (desired_temp_status < current_temp_status):
+                print("Cool down")
+                self.living_fan.turn_fan_on()
+                self.update_living_fan(3) # highest speed mode - 3
+            # else warmer, turn off fan (future, can turn on heat)
+            else:
+                self.living_fan.turn_fan_off()
+                self.update_living_fan(0) # off - speed mode 0
 
     # Listener for current temp changes
     def current_temp_listener(self, doc_snapshot, changes, read_time):

@@ -15,45 +15,50 @@ class LightBulb:
         
         # Initialize PWM
         self.pwm = GPIO.PWM(self.LIGHT_PIN, self.PWM_FREQ)
-        self.pwm.start(0)  # Start with 100% duty cycle (which is OFF with inverted logic)
+        self.pwm.start(0)  # Start with 0% duty cycle (which is off)
+        self.light_mode = 0 # Start with light mode set to off
         
         # Set initial brightness (default is 0%)
         self.change_brightness(pwm_val)
         print(f"Light bulb initialized on pin {self.LIGHT_PIN} with frequency {self.PWM_FREQ}Hz")
         
-    def change_brightness(self, brightness_percent):
+    def change_brightness(self, mode):
         # Clamp the brightness value between 0 and 100%
-        brightness_percent = max(0, min(100, brightness_percent))
+        brightness_percent = max(0, min(2, mode))
 
-        # # Map 0-100 input range to 75-100 brightness range
-        # if brightness_percent < 100:
-        #     brightness_percent_new = (brightness_percent * 30 / 100) + 70
-        # else:
-        #     brightness_percent_new = 100
+        if(mode == 0):
+            brightness_percent = 0
         
-        # inverted_percent = 100 - brightness_percent_new
+        elif (mode == 1):
+            brightness_percent = 40
+        
+        else:
+            brightness_percent = 60
 
-
-        # Apply the inverted duty cycle
+        # Apply the duty cycle
         self.pwm.ChangeDutyCycle(brightness_percent)
+
+        # Update light mode
+        self.light_mode = mode
         
-        print(f"Brightness set to: {brightness_percent}% (PWM duty cycle: {brightness_percent}%)")
+        print(f"Brightness mode set to: {mode}% (PWM duty cycle: {brightness_percent}%)")
         time.sleep(0.1)
 
     def turn_light_off(self):
-        # With inverted logic, 100% duty cycle turns the light off
+        # 0% turn off light
         self.pwm.ChangeDutyCycle(0)
+        self.light_mode = 0
         print("Light turned off\n")
         
     def turn_light_on(self):
-        # With inverted logic, 0% duty cycle is full brightness
-        self.pwm.ChangeDutyCycle(100)
+        # Max brightness set to 60% for on
+        self.pwm.ChangeDutyCycle(60)
+        self.light_mode = 2
         print("Light turned on (full brightness)\n")
         
     def get_status(self):
-        # Note: RPi.GPIO doesn't have a direct way to get the current duty cycle
-        print("Current brightness status cannot be retrieved with RPi.GPIO")
-        return None
+        print("Current brightness status: ", self.light_mode)
+        return self.light_mode
         
     def cleanup(self):
         # Turn off the light and clean up GPIO
