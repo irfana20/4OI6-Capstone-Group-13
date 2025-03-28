@@ -1,7 +1,8 @@
-from lcd_i2c import LCD
+from src.lcd_i2c import LCD
+from src.step_motor import Step_Motor
+
 import RPi.GPIO as GPIO
 import time
-from step_motor import Step_Motor
 
 door_motor = Step_Motor()
 
