@@ -55,10 +55,6 @@ class FacialRec:
         msg = f"{name} is at the door" if name != "Unknown" else "Unknown person is at the door"
         alert_data = {
             "message": msg,
-            "notification": {
-                "title": "Motion Detected",
-                "body": "Known vs unknown!"
-            },
             "timestamp": datetime.now().isoformat()
         }
         self.db.collection("alerts").document(doc_name).set(alert_data)

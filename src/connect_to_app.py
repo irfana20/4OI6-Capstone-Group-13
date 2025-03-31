@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 import sys
 import os
+import threading
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -101,7 +102,7 @@ class ConnectToApp:
     # Listener for living room fan changes
     def living_fan_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"Fan Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
+            #print(f"Fan Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             fan_status = doc.get('Living_Room_Fan')
             if fan_status is not None:
                 if fan_status:  # If fan is not 0
@@ -114,7 +115,7 @@ class ConnectToApp:
     # Listener for bedroom fan changes
     def bed_fan_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"Bedroom Fan Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
+            #print(f"Bedroom Fan Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             fan_status = doc.get('Bedroom_Fan')
             if fan_status is not None:
                 if fan_status:  # If fan is not 0
@@ -127,7 +128,7 @@ class ConnectToApp:
     # Listener for living room light changes
     def living_light_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"Light Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
+            #print(f"Light Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             light_status = doc.get('Living_Room_Light')
             if light_status is not None:
                 if light_status:  # If light is ON
@@ -140,7 +141,7 @@ class ConnectToApp:
     # Listener for bedroom light changes
     def bed_light_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"Bedroom Light Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
+            #print(f"Bedroom Light Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             light_status = doc.get('Bedroom_Light')
             if light_status is not None:
                 if light_status:  # If light is ON
@@ -153,7 +154,7 @@ class ConnectToApp:
     # Listener for entrance light changes
     def entrance_light_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"Entrance Light Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
+            #print(f"Entrance Light Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             light_status = doc.get('Entrance_Light')
             if light_status is not None:
                 if light_status:  # If light is ON
@@ -166,33 +167,37 @@ class ConnectToApp:
     # Listener for awayMode changes
     def away_mode_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"AwayMode Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
+            #print(f"AwayMode Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             away_status = doc.get('isAway')
             if away_status is not None:
                 if away_status:  # If away mode is ON
-                    print(f"Away mode active: {away_status}")
-                    # call motion detection to activate if away mode is set
+                    print(f"Away mode activated!: {away_status}")
                     self.away_stop = False
-                    self.motion_detection()
+                    # Start motion detection in a new thread
+                    threading.Thread(target=self.motion_detection, daemon=True).start()
                 else:  # If away mode is OFF (i.e. home)
-                    print(f"Away mode not active: {away_status}")
+                    print(f"Away mode deactivated: {away_status}")
                     self.away_stop = True
+
 
     # motion detection using motion sensor for away mode (intruder alert)
     def motion_detection(self):
-        # turn off all the lights if isAway
-        if not self.away_stop:
-            self.living_light.turn_light_off()
-            self.update_living_light(0)
+        # turn off all the lights if isAway on
+        self.living_light.turn_light_off()
+        self.update_living_light(0)
 
-            self.bed_light.turn_light_off()
-            self.update_bed_light(0)
+        self.bed_light.turn_light_off()
+        self.update_bed_light(0)
 
-            self.entrance_light.turn_light_off()
-            self.update_entrance_light(0)
-            print("turned off all lights")
+        self.entrance_light.turn_light_off()
+        self.update_entrance_light(0)
+        print("All lights turned off.")
 
-        # keep detecting motion while awaymode is turned on
+        self.bed_fan.turn_fan_off()
+        self.update_bed_fan(0)
+        print("Bedroom fan turned off.")
+
+        # keep detecting motion while isAway is on
         while not self.away_stop:
             # use the motion sensor to check motion detection
             result = self.motion_sensor.check_motion()
@@ -200,42 +205,53 @@ class ConnectToApp:
             if(result == "Movement detected"):
                 self.send_alert("Intruder!", "Intrusion_Alert")
             
-            time.sleep(5)
+            time.sleep(2)
 
     # Listener for desired temp changes
     def desired_temp_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"Desired Temp Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
+            #print(f"Desired Temp Listener Snapshot: {doc.to_dict()}")  # Debugging: print the snapshot data
             desired_temp_status = doc.get('desiredTemp')
             current_temp_status = doc.get('currentTemp')
-            print(f"Desired Temp: {desired_temp_status}, Current Temp: {current_temp_status}")
+            #print(f"Desired Temp: {desired_temp_status}, Current Temp: {current_temp_status}")
             
-            # if we want cooler, turn on fan
-            if (desired_temp_status < current_temp_status):
-                print("Cool down")
-                self.living_fan.turn_fan_on()
-                self.update_living_fan(3) # highest speed mode - 3
-            # else warmer, turn off fan (future, can turn on heat)
-            else:
-                self.living_fan.turn_fan_off()
-                self.update_living_fan(0) # off - speed mode 0
+            # Start motion detection in a new thread
+            threading.Thread(target=self.change_fan_temp, daemon=True, args = (desired_temp_status, current_temp_status)).start()
+
+
+    def change_fan_temp(self, desired_temp, current_temp):
+        # if we want cooler, turn on fan
+        if (desired_temp < current_temp):
+            print(f"Desired Temp: {desired_temp}, Current Temp: {current_temp}")
+            print("Cool down.")
+            self.living_fan.turn_fan_on()
+            self.update_living_fan(2) # highest speed mode - 2
+
+        # else warmer, turn off fan (future, can turn on heat)
+        else:
+            print(f"Desired Temp: {desired_temp}, Current Temp: {current_temp}")
+            print("Warm up.")
+            self.living_fan.turn_fan_off()
+            self.update_living_fan(0) # off - speed mode 0
+
 
     # Listener for current temp changes
     def current_temp_listener(self, doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
-            print(f"Current Temp Listener Snapshot: {doc.to_dict()}")  # Debugging
+            #print(f"Current Temp Listener Snapshot: {doc.to_dict()}")  # Debugging
             prev_temp = doc.get('currentTemp') # get the currentTemp on app
             self.update_temp(prev_temp)
 
     def update_temp(self, prev_temp):
-        current_temp_val = self.temp_sensor.read_temp() # get the current temp from sensor
+        while True:
+            current_temp_val = self.temp_sensor.read_temp() # get the current temp from sensor
 
-        # check if the temp changed
-        if prev_temp != current_temp_val:
-            print(f"Current temp (on app): {prev_temp}")
-            print(f"Temperature Changed to: {current_temp_val}")
-            # if temp changed, update currentTemp on app to the new temp
-            self.update_current_temp(current_temp_val)
+            # check if the temp changed
+            if prev_temp != current_temp_val:
+                #print(f"Current temp (on app): {prev_temp}")
+                #print(f"Temperature Changed to: {current_temp_val}")
+                # if temp changed, update currentTemp on app to the new temp
+                self.update_current_temp(current_temp_val)
 
 
     def connect_listeners(self):
@@ -249,7 +265,7 @@ class ConnectToApp:
         
         self.doc_ref_away.on_snapshot(self.away_mode_listener)
 
-        # self.doc_ref_desired_temp.on_snapshot(self.desired_temp_listener)
+        self.doc_ref_desired_temp.on_snapshot(self.desired_temp_listener)
         self.doc_ref_current_temp.on_snapshot(self.current_temp_listener)
 
         # Keep the thread alive and listening
@@ -263,12 +279,12 @@ class ConnectToApp:
 
                 self.living_fan.turn_fan_off()
                 self.bed_fan.turn_fan_off()
-                print("turned off all fans")
+                print("All fans turned off.")
 
                 self.living_light.turn_light_off()
                 self.bed_light.turn_light_off()
                 self.entrance_light.turn_light_off()
-                print("turned off all lights")
+                print("All lights turned off.")
 
     def send_alert(self, message, doc_name=None):
         # if no document name is given
